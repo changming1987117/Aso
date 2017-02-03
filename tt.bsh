@@ -1,0 +1,99 @@
+
+import com.awesome.aso.job.plan.EveryDayHourlyIncrConRateCalcu;
+import com.awesome.aso.job.plan.EveryDayHourlyTimerPlan;
+import com.awesome.aso.job.plan.ImmediateRunPlan;
+
+import com.awesome.aso.job.data.SqlDataSource;
+import com.awesome.aso.job.hw.HWJobContext;
+import com.awesome.aso.job.hw.HWAppstoreApi;
+import com.awesome.aso.job.util.HWJsonParseUtils;
+import com.awesome.aso.job.util.ApkParserUtils;
+import com.awesome.aso.job.util.HttpRequestUtils;
+
+import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
+
+import com.awesome.aso.job.log.LoggerHelper;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+// 数据源
+String host = "10.51.116.122";
+String dbName = "aso-manager";
+String user = "admin";
+String password = "123321";
+dataSoure = new SqlDataSource(host,dbName,user,password);
+
+// 刷榜数量配置
+int number = 100; //初始日下载数
+int days = 14;    //刷榜天数
+float increasing = 0.2; // 日增加率
+float conversionRate = 0.8; // 转换率
+targetPackage="com.mrkj.sm6"; // 目标包名
+
+calcu = new EveryDayHourlyIncrConRateCalcu(number,days,increasing,conversionRate);
+//taskPlan = new EveryDayHourlyTimerPlan(targetPackage,dataSoure,calcu);
+taskPlan = new ImmediateRunPlan(targetPackage,dataSoure,number,conversionRate);
+
+String resetProxyUrl = "http://10.173.31.116:9000/reset?intf=2&type=l2tp";
+String vpnHost = "10.173.31.116";
+int vpnPort = 8802;
+
+ASOJob() {
+
+    searchDownload(HWAppstoreApi api, HWJobContext context) {
+    
+    	api.statup();
+    	api.diffUpgrade(null);
+		String trace = context.SESSION_TAB_INFO.getWithError().get("推荐");
+		
+		// 搜索目标APP
+		String uri = "searchApp|算命";
+		int page = 0;
+		JSONObject targetAppInfo = null;
+		JSONObject detailResult = null;
+		do {
+			detailResult = api.getTabDetail(uri,trace,page);
+			System.out.println(detailResult);
+			JSONArray allApp = HWJsonParseUtils.getAllLayoutDataDataListByLayoutName(detailResult, "safeappcard");
+			System.out.println(allApp);
+			//
+			targetAppInfo = HWJsonParseUtils.findTargetApp(allApp,super.targetPackage);
+			System.out.println(targetAppInfo);
+			if ( targetAppInfo != null ) {
+				context.SESSION_TARGET_DETAIL.set(targetAppInfo);
+				break;
+			}
+			page++;
+        } while (HWJsonParseUtils.hasNext(detailResult));
+		
+		// 未找到APP
+		if (targetAppInfo == null) {
+			return false;
+		}
+		
+		// 下载
+		api.startDownloadRep();
+		api.download(false);
+		api.downloadResultRep();
+		api.diffUpgradeTargetDetail();
+		
+		return true;
+    }
+
+    run(HWJobContext context, AtomicBoolean isOver) {
+    	HttpRequestUtils.resetProxyEnable(super.resetProxyUrl,isOver);
+    	//
+    	HWAppstoreApi api = new HWAppstoreApi(context);
+    	return searchDownload(api,context);
+    }
+    
+    return this;
+    
+}
+
+asoJob = ASOJob();
+

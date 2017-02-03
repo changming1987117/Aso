@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Wed Dec 21 16:34:47 CST 2016
+onejar.license.required=true
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=false
+jarname=aso-manager-bsh.jar
+manifest.mergeall=true
+manifest.mainclass=com.awesome.aso.job.ASOManger
+manifest.file=<createnew>
+jarname.isextern=false
+onejar.expand=
+excludes=
+includes=
